@@ -91,7 +91,7 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.opt`
@@ -102,7 +102,9 @@ vim.g.have_nerd_font = false
 vim.opt.number = true
 -- You can also add relative line numbers, to help with jumping.
 --  Experiment for yourself to see if you like it!
--- vim.opt.relativenumber = true
+vim.opt.relativenumber = true
+
+vim.opt.colorcolumn = '81,161'
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.opt.mouse = 'a'
@@ -115,11 +117,13 @@ vim.opt.showmode = false
 --  See `:help 'clipboard'`
 vim.opt.clipboard = 'unnamedplus'
 
+-- Break lines at word boundaries
+vim.opt.linebreak = true
 -- Enable break indent
 vim.opt.breakindent = true
 
--- Save undo history
-vim.opt.undofile = true
+-- Disable undo file (to prevent undo between sessions)
+vim.opt.undofile = false
 
 -- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
 vim.opt.ignorecase = true
@@ -190,6 +194,15 @@ vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right win
 vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 
+-- Remaps for cut/delete
+-- Remap 'x' to 'd' to cut text
+vim.keymap.set({ 'n', 'x' }, 'x', 'd', { desc = 'Cut' })
+vim.keymap.set('n', 'xx', 'dd', { desc = 'Cut line' })
+-- Remap 'd' to '"_d' to delete without copying
+vim.keymap.set({ 'n', 'x' }, 'd', '"_d', { desc = 'Delete' })
+-- Remap 'p' to '"_dP' to paste over selection without copying
+vim.keymap.set('x', 'p', '"_dP', { desc = 'Paste over selection' })
+
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
 
@@ -249,8 +262,10 @@ require('lazy').setup({
     'lewis6991/gitsigns.nvim',
     opts = {
       signs = {
-        add = { text = '+' },
-        change = { text = '~' },
+        add = { text = '┃' },
+        change = { text = '┃' },
+        -- add = { text = '+' },
+        -- change = { text = '~' },
         delete = { text = '_' },
         topdelete = { text = '‾' },
         changedelete = { text = '~' },
@@ -288,11 +303,14 @@ require('lazy').setup({
         ['<leader>w'] = { name = '[W]orkspace', _ = 'which_key_ignore' },
         ['<leader>t'] = { name = '[T]oggle', _ = 'which_key_ignore' },
         ['<leader>h'] = { name = 'Git [H]unk', _ = 'which_key_ignore' },
+        ['<leader>u'] = { name = '+prefix', _ = 'which_key_ignore' },
       }
       -- visual mode
       require('which-key').register({
         ['<leader>h'] = { 'Git [H]unk' },
       }, { mode = 'v' })
+
+      require('custom.utils.mini').ai_whichkey()
     end,
   },
 
@@ -592,6 +610,9 @@ require('lazy').setup({
             },
           },
         },
+        stylua = {},
+        jsonls = {},
+        tailwindcss = {},
       }
 
       -- Ensure the servers and tools above are installed
@@ -657,7 +678,22 @@ require('lazy').setup({
         --
         -- You can use a sub-list to tell conform to run *until* a formatter
         -- is found.
-        -- javascript = { { "prettierd", "prettier" } },
+        javascript = { { 'prettierd', 'prettier' } },
+        javascriptreact = { { 'prettierd', 'prettier' } },
+        typescript = { { 'prettierd', 'prettier' } },
+        typescriptreact = { { 'prettierd', 'prettier' } },
+        vue = { { 'prettierd', 'prettier' } },
+        css = { { 'prettierd', 'prettier' } },
+        scss = { { 'prettierd', 'prettier' } },
+        less = { { 'prettierd', 'prettier' } },
+        html = { { 'prettierd', 'prettier' } },
+        json = { { 'prettierd', 'prettier' } },
+        jsonc = { { 'prettierd', 'prettier' } },
+        yaml = { { 'prettierd', 'prettier' } },
+        markdown = { { 'prettierd', 'prettier' } },
+        ['markdown.mdx'] = { { 'prettierd', 'prettier' } },
+        graphql = { { 'prettierd', 'prettier' } },
+        handlebars = { { 'prettierd', 'prettier' } },
       },
     },
   },
@@ -729,11 +765,11 @@ require('lazy').setup({
           -- Accept ([y]es) the completion.
           --  This will auto-import if your LSP supports it.
           --  This will expand snippets if the LSP sent a snippet.
-          ['<C-y>'] = cmp.mapping.confirm { select = true },
+          -- ['<C-y>'] = cmp.mapping.confirm { select = true }, -- Old mapping
 
           -- If you prefer more traditional completion keymaps,
           -- you can uncomment the following lines
-          --['<CR>'] = cmp.mapping.confirm { select = true },
+          ['<CR>'] = cmp.mapping.confirm { select = true },
           --['<Tab>'] = cmp.mapping.select_next_item(),
           --['<S-Tab>'] = cmp.mapping.select_prev_item(),
 
@@ -765,7 +801,15 @@ require('lazy').setup({
           --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
         },
         sources = {
-          { name = 'nvim_lsp' },
+          {
+            name = 'nvim_lsp',
+            entry_filter = function(entry)
+              local kind = require('cmp.types').lsp.CompletionItemKind[entry:get_kind()]
+
+              -- Filtering text suggestions
+              return kind ~= 'Text'
+            end,
+          },
           { name = 'luasnip' },
           { name = 'path' },
         },
@@ -778,17 +822,33 @@ require('lazy').setup({
     -- change the command in the config to whatever the name of that colorscheme is.
     --
     -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
-    'folke/tokyonight.nvim',
+    -- 'folke/tokyonight.nvim',
+    'catppuccin/nvim',
+    name = 'catppuccin',
     priority = 1000, -- Make sure to load this before all the other start plugins.
     init = function()
       -- Load the colorscheme here.
       -- Like many other themes, this one has different styles, and you could load
       -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      vim.cmd.colorscheme 'tokyonight-night'
+      vim.cmd.colorscheme 'catppuccin'
 
       -- You can configure highlights by doing something like:
       vim.cmd.hi 'Comment gui=none'
     end,
+    opts = {
+      -- Config for Tokyonight
+      -- transparent = true,
+      -- styles = {
+      --   sidebars = 'transparent',
+      --   floats = 'transparent',
+      -- },
+      transparent_background = true,
+      custom_highlights = function(colors)
+        return {
+          GitSignsChange = { fg = colors.mauve },
+        }
+      end,
+    },
   },
 
   -- Highlight todo, notes, etc in comments
@@ -803,7 +863,28 @@ require('lazy').setup({
       --  - va)  - [V]isually select [A]round [)]paren
       --  - yinq - [Y]ank [I]nside [N]ext [']quote
       --  - ci'  - [C]hange [I]nside [']quote
-      require('mini.ai').setup { n_lines = 500 }
+      local gen_spec = require('mini.ai').gen_spec
+      require('mini.ai').setup {
+        n_lines = 500,
+        -- Config copied from https://www.lazyvim.org/plugins/coding#miniai
+        -- Treesitter text objects require 'nvim-treesitter-textobjects'
+        custom_textobjects = {
+          o = gen_spec.treesitter { -- code block
+            a = { '@block.outer', '@conditional.outer', '@loop.outer' },
+            i = { '@block.inner', '@conditional.inner', '@loop.inner' },
+          },
+          f = gen_spec.treesitter { a = '@function.outer', i = '@function.inner' }, -- function
+          c = gen_spec.treesitter { a = '@class.outer', i = '@class.inner' }, -- class
+          t = { '<([%p%w]-)%f[^<%w][^<>]->.-</%1>', '^<.->().*()</[^/]->$' }, -- tags
+          d = { '%f[%d]%d+' }, -- digits
+          e = { -- Word with case
+            { '%u[%l%d]+%f[^%l%d]', '%f[%S][%l%d]+%f[^%l%d]', '%f[%P][%l%d]+%f[^%l%d]', '^[%l%d]+%f[^%l%d]' },
+            '^().*()$',
+          },
+          u = gen_spec.function_call(), -- u for "Usage"
+          U = gen_spec.function_call { name_pattern = '[%w_]' }, -- without dot in function name
+        },
+      }
 
       -- Add/delete/replace surroundings (brackets, quotes, etc.)
       --
@@ -863,6 +944,12 @@ require('lazy').setup({
       --    - Treesitter + textobjects: https://github.com/nvim-treesitter/nvim-treesitter-textobjects
     end,
   },
+  {
+    'nvim-treesitter/nvim-treesitter-textobjects',
+    dependencies = {
+      'nvim-treesitter/nvim-treesitter',
+    },
+  },
 
   -- The following two comments only work if you have downloaded the kickstart repo, not just copy pasted the
   -- init.lua. If you want these files, they are in the repository, so you can just download them and
@@ -874,18 +961,18 @@ require('lazy').setup({
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
   -- require 'kickstart.plugins.debug',
-  -- require 'kickstart.plugins.indent_line',
+  require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',
-  -- require 'kickstart.plugins.autopairs',
-  -- require 'kickstart.plugins.neo-tree',
-  -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
+  require 'kickstart.plugins.autopairs',
+  require 'kickstart.plugins.neo-tree',
+  require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
   --
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
   --    For additional information, see `:help lazy.nvim-lazy.nvim-structuring-your-plugins`
-  -- { import = 'custom.plugins' },
+  { import = 'custom.plugins' },
 }, {
   ui = {
     -- If you are using a Nerd Font: set icons to an empty table which will use the

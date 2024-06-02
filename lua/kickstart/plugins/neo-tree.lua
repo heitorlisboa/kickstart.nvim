@@ -20,6 +20,16 @@ return {
           ['\\'] = 'close_window',
         },
       },
+      filtered_items = {
+        -- Hidden items should not be visible
+        visible = false,
+        -- Disable hiding dot-files
+        hide_dotfiles = false,
+        -- Disable hiding git-ignored files
+        hide_gitignored = false,
+        -- Hide some files/directories by name
+        hide_by_name = { '.DS_Store', '.git' },
+      },
     },
   },
 }
